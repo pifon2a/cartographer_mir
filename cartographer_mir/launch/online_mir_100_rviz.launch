@@ -13,23 +13,41 @@
 
 <launch>
   <param name="/use_sim_time" value="true" />
+
+  <param name="robot_description"
+      textfile="$(find cartographer_mir)/urdfs/mir-100.urdf" />
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher"
+      type="robot_state_publisher" />
+
   <node name="rviz" pkg="rviz" type="rviz" required="true"
       args="-d $(find cartographer_ros)/configuration_files/demo_2d.rviz" />
-  <node name="cartographer_offline_node" pkg="cartographer_ros"
-      required="true"
-      type="cartographer_offline_node" args="
+
+  <node name="playbag" pkg="rosbag" type="play"
+      args="-s 0 --clock $(arg bag_filename)">
+    <remap from="cv_camera/uncompressed_image_raw" to="virtual_camera/image_raw" />
+    <remap from="cv_camera/camera_info" to="virtual_camera/camera_info"/>
+  </node>
+
+  <node name="marker_detection_node" pkg="cartographer_ros"
+      type="marker_ronin_node.sh" args="
+       --marker_config=/usr/local/google/home/pifon/workspace/marker_72dpi_proto.txt
+       --marker_topic=markers
+       --start_camera=false
+       --camera_topic=/virtual_camera/image_raw
+       --logtostderr"
+       output="screen"/>
+
+  <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
           -configuration_directory $(find cartographer_mir)/configuration_files
-          -configuration_basenames mir-100-mapping.lua
-          -urdf_filenames $(find cartographer_mir)/urdfs/mir-100.urdf
-          -use_bag_transforms=false
-          -bag_filenames $(arg bag_filenames)
-          -keep_running true"
+          -configuration_basename mir-100-mapping.lua"
       output="screen">
     <remap from="scan_1" to="f_scan" />
     <remap from="scan_2" to="b_scan" />
     <remap from="imu" to="imu_data" />
     <remap from="ignore_odom" to="odom" />
     <remap from="odom" to="odom_enc" />
+    <remap from="landmark" to="markers" />
   </node>
 </launch>
-
